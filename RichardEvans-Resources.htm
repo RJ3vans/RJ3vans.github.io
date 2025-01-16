@@ -149,20 +149,14 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
     <H1>Public Google Colab Notebooks</H1>
 	
 	<H2><a href="https://colab.research.google.com/drive/1IgZiicqRlTHf05iu6ReuSLvuyrOys82F?usp=sharing" target="_blank">Text Simplification</a></H2>
-	This notebook allows you to simplify syntactically complex sentences. The method uses: 
-	<ul>
-		<li>One finetuned BERT model to identify syntactic coordinators and the boundaries of subordinate constituents occurring in input sentences</li>
-		<li>One finetuned BERT model to identify the spans of compound clauses in input sentences</li>
-		<li>One finetuned BERT model to identify the spans of complex syntactic constituents (containing subordinate clauses).</li>
+	This notebook allows you to simplify syntactically complex sentences. The method uses one finetuned BERT model to identify syntactic coordinators 
+	and the boundaries of subordinate constituents occurring in input sentences, one finetuned BERT model to identify the spans of compound clauses in 
+	input sentences, and one finetuned BERT model to identify the spans of complex syntactic constituents (containing subordinate clauses).
 
-	</ul>
-	Input sentences containing complex NPs and compound clauses are converted into sequences of simpler sentences in which:
-	<ul>
-		<li>One simple sentence for each conjoin of a compound clause</li>
-		<li>One simple sentence for the matrix NP of each complex NP.</li>
-		<li>One simple sentence for the subordinate clause of each complex NP.</li>
-	</ul>
-
+	Input sentences containing complex NPs and compound clauses are converted into sequences of simpler sentences with one simple sentence for each 
+	conjoin of a compound clause, one simple sentence for the matrix NP of each complex NP, and one simple sentence for the subordinate clause of each 
+	complex NP.
+	
 	The approach is based on that presented in <a href="https://rj3vans.github.io/Evans2020_SentenceSimplificationForTextProcessing.pdf" target="_blank">Evans (2020)</a> but the finetuned BERT models make identification of complex NPs and compound clauses more accurate. 
 	
     <H1>Annotated corpora</H1>
