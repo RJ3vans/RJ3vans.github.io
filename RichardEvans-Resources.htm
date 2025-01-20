@@ -149,6 +149,7 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
     <H1>Public Google Colab Notebooks</H1>
 	
 	<H2><a href="https://colab.research.google.com/drive/1IgZiicqRlTHf05iu6ReuSLvuyrOys82F?usp=sharing" target="_blank">Text Simplification</a></H2>
+	
 	This notebook allows you to simplify syntactically complex sentences. The method uses 3 finetuned BERT models: one
 	to identify syntactic coordinators and the boundaries of subordinate constituents, 
 	one to identify the spans of compound clauses, 
@@ -162,6 +163,22 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
 	of the subordinate clause modifying a complex NP in the original sentence.
 	
 	The approach is based on that presented in <a href="https://rj3vans.github.io/Evans2020_SentenceSimplificationForTextProcessing.pdf" target="_blank">Evans (2020)</a> but the finetuned BERT models make identification of complex NPs and compound clauses more accurate. 
+
+
+	<H2>Sign Tagger</H2>
+
+	Signs are lexical-punctuational markers of syntactic complexity. The sign tagger identifies the coordinating or bounding 
+	functions of items such as punctuation marks (<b>,</b>, <b>;</b>, <b>:</b>), coordinators (<b>and</b>, <b>but</b>, <b>or</b>), 
+	complementisers (<b>that</b>), relative and wh- pronouns (<b>what</b>, <b>when</b>, <b>where</b>, <b>which</b>, 
+	<b>while</b>, <b>who</b>), and bigrams consisting of a punctuation mark followed by one of the lexical signs of 
+	syntactic complexity (<b>, and</b>, <b>; but</b>, <b>, which</b>, <b>, who</b>, <b>, when</b>, etc.)
+
+	This notebook allows you to finetune a BERT model to classify signs of syntactic complexity with respect to an 
+	annotation scheme based on that presented in 
+	<a href="https://rj3vans.github.io/TSD-2013-Contrast.pdf" target="_blank">Evans and 
+		Orasan (2013)<a> and Chapter 2 of 
+	<a href="https://rj3vans.github.io/Evans2020_SentenceSimplificationForTextProcessing.pdf" target="_blank">Evans 
+	(2020)</a>.
 	
     <H1>Annotated corpora</H1>
 
