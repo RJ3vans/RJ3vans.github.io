@@ -291,12 +291,18 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
         result.textContent = JSON.stringify(response, null, 2);
       }
     } catch (error) {
-      status.textContent = "Request failed: " + ((error && error.message) || error);
-      console.error(error);
-    } finally {
-      running = false;
-      runBtn.disabled = false;
-    }
+  const detail = (error && error.message) || String(error);
+  if (/ZeroGPU quota/i.test(detail)) {
+    status.innerHTML =
+      'The public demo has used its free GPU time for now. ' +
+      'You can try the full Space while logged into Hugging Face: ' +
+      '<a href="https://huggingface.co/spaces/RJ3vans/SentenceSimplifier" target="_blank">' +
+      'SentenceSimplifier</a>, or come back tomorrow.';
+  } else {
+    status.textContent = "Request failed: " + detail;
+  }
+  console.error(error);
+}
   });
 </script>
 </li>
