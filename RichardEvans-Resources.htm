@@ -215,64 +215,100 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
   </style>
 
   <script type="module">
-    import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+  import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
 
-    const input = document.getElementById("sss-input");
-    const runBtn = document.getElementById("sss-run");
-    const clearBtn = document.getElementById("sss-clear");
-    const status = document.getElementById("sss-status");
-    const result = document.getElementById("sss-result");
+  const SPACE_URL = "https://rj3vans-sentencesimplifier.hf.space";
+  const input = document.getElementById("sss-input");
+  const runBtn = document.getElementById("sss-run");
+  const clearBtn = document.getElementById("sss-clear");
+  const status = document.getElementById("sss-status");
+  const result = document.getElementById("sss-result");
 
-    let app = null;
+  let app = null;
+  let running = false;
 
-    async function getClient() {
-      if (!app) {
-        status.textContent = "Connecting to the Hugging Face Space...";
-        app = await Client.connect("RJ3vans/SentenceSimplifier");
-      }
-      return app;
+  function showError(error) {
+    const detail = (error && (error.message || error.toString())) || "Unknown error";
+    status.textContent = "Request failed: " + detail;
+    console.error(error);
+  }
+
+  async function getClient(forceNew) {
+    if (forceNew || !app) {
+      status.textContent = "Connecting to the Hugging Face Space...";
+      app = await Client.connect(SPACE_URL);
+    }
+    return app;
+  }
+
+  document.querySelectorAll("#sss-demo .sss-example").forEach((button) => {
+    button.addEventListener("click", () => {
+      input.value = button.getAttribute("data-text");
+      input.focus();
+    });
+  });
+
+  clearBtn.addEventListener("click", () => {
+    input.value = "";
+    result.innerHTML = "";
+    status.textContent = "Input cleared.";
+  });
+
+  runBtn.addEventListener("click", async () => {
+    if (running) {
+      status.textContent = "A request is already running. Please wait for it to finish.";
+      return;
     }
 
-    document.querySelectorAll("#sss-demo .sss-example").forEach((button) => {
-      button.addEventListener("click", () => {
-        input.value = button.getAttribute("data-text");
-        input.focus();
-      });
-    });
+    const text = input.value.trim();
+    if (!text) {
+      status.textContent = "Please enter some text first.";
+      return;
+    }
 
-    clearBtn.addEventListener("click", () => {
-      input.value = "";
-      result.innerHTML = "";
-      status.textContent = "Input cleared.";
-    });
+    running = true;
+    runBtn.disabled = true;
+    result.innerHTML = "";
+    status.textContent = "Simplifying... the first request can take a while if the Space is waking up.";
 
-    runBtn.addEventListener("click", async () => {
-      const text = input.value.trim();
-      if (!text) {
-        status.textContent = "Please enter some text first.";
-        return;
+    try {
+      const client = await getClient(false);
+      const job = client.submit("/process_text", [text]);
+      let html = null;
+
+      for await (const message of job) {
+        if (message.type === "status") {
+          if (message.queue) {
+            status.textContent = "Queued" +
+              (message.position != null ? " at position " + message.position : "") +
+              "...";
+          } else if (message.stage === "pending" || message.stage === "generating") {
+            status.textContent = "Running on the Space...";
+          } else if (message.success === false || message.stage === "error") {
+            throw new Error(message.message || "The Space returned an error.");
+          }
+        }
+
+        if (message.type === "data" && message.data) {
+          html = Array.isArray(message.data) ? message.data[0] : message.data;
+        }
       }
 
-      runBtn.disabled = true;
-      status.textContent = "Simplifying... the first request can take a while if the Space is waking up.";
-      result.innerHTML = "";
-
-      try {
-        const client = await getClient();
-        const response = await client.predict("/process_text", {
-          input_text: text
-        });
-        const html = Array.isArray(response.data) ? response.data[0] : response.data;
-        result.innerHTML = html || "No output was returned.";
-        status.textContent = "Done.";
-      } catch (error) {
-        console.error(error);
-        status.textContent = "Could not reach the Space. Open the demo link above to check that it is running, then try again.";
-      } finally {
-        runBtn.disabled = false;
+      if (!html) {
+        throw new Error("The Space finished but returned no HTML.");
       }
-    });
-  </script>
+
+      result.innerHTML = html;
+      status.textContent = "Done.";
+    } catch (error) {
+      app = null; // do not reuse a dead session
+      showError(error);
+    } finally {
+      running = false;
+      runBtn.disabled = false;
+    }
+  });
+</script>
 </li>
       </ul>
     </div>
