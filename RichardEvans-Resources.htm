@@ -224,21 +224,28 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
   const status = document.getElementById("sss-status");
   const result = document.getElementById("sss-result");
 
-  let app = null;
   let running = false;
 
-  function showError(error) {
-    const detail = (error && (error.message || error.toString())) || "Unknown error";
-    status.textContent = "Request failed: " + detail;
-    console.error(error);
-  }
+  function extractHtml(payload) {
+    if (payload == null) return "";
+    if (typeof payload === "string") return payload;
+    if (typeof payload === "number" || typeof payload === "boolean") return String(payload);
 
-  async function getClient(forceNew) {
-    if (forceNew || !app) {
-      status.textContent = "Connecting to the Hugging Face Space...";
-      app = await Client.connect(SPACE_URL);
+    if (Array.isArray(payload)) {
+      for (const item of payload) {
+        const found = extractHtml(item);
+        if (found) return found;
+      }
+      return "";
     }
-    return app;
+
+    if (typeof payload === "object") {
+      if (typeof payload.value === "string") return payload.value;
+      if (typeof payload.html === "string") return payload.html;
+      if ("data" in payload) return extractHtml(payload.data);
+      if ("output" in payload) return extractHtml(payload.output);
+    }
+    return "";
   }
 
   document.querySelectorAll("#sss-demo .sss-example").forEach((button) => {
@@ -256,7 +263,7 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
 
   runBtn.addEventListener("click", async () => {
     if (running) {
-      status.textContent = "A request is already running. Please wait for it to finish.";
+      status.textContent = "A request is already running. Please wait.";
       return;
     }
 
@@ -269,40 +276,23 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
     running = true;
     runBtn.disabled = true;
     result.innerHTML = "";
-    status.textContent = "Simplifying... the first request can take a while if the Space is waking up.";
+    status.textContent = "Simplifying... this can take a minute on ZeroGPU.";
 
     try {
-      const client = await getClient(false);
-      const job = client.submit("/process_text", [text]);
-      let html = null;
+      const client = await Client.connect(SPACE_URL);
+      const response = await client.predict("/process_text", [text]);
+      const html = extractHtml(response);
 
-      for await (const message of job) {
-        if (message.type === "status") {
-          if (message.queue) {
-            status.textContent = "Queued" +
-              (message.position != null ? " at position " + message.position : "") +
-              "...";
-          } else if (message.stage === "pending" || message.stage === "generating") {
-            status.textContent = "Running on the Space...";
-          } else if (message.success === false || message.stage === "error") {
-            throw new Error(message.message || "The Space returned an error.");
-          }
-        }
-
-        if (message.type === "data" && message.data) {
-          html = Array.isArray(message.data) ? message.data[0] : message.data;
-        }
+      if (html) {
+        result.innerHTML = html;
+        status.textContent = "Done.";
+      } else {
+        status.textContent = "The Space replied, but the HTML field was empty. Raw response is shown below.";
+        result.textContent = JSON.stringify(response, null, 2);
       }
-
-      if (!html) {
-        throw new Error("The Space finished but returned no HTML.");
-      }
-
-      result.innerHTML = html;
-      status.textContent = "Done.";
     } catch (error) {
-      app = null; // do not reuse a dead session
-      showError(error);
+      status.textContent = "Request failed: " + ((error && error.message) || error);
+      console.error(error);
     } finally {
       running = false;
       runBtn.disabled = false;
