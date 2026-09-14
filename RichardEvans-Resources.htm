@@ -131,13 +131,149 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
 
 <div class="category-description">
       <ul>
-	<li><H2><a href="https://huggingface.co/spaces/RJ3vans/SentenceSimplifier" target="_blank">Syntactic Sentence Simplifier</a></H2>
-	  This demo implements the iterative approach to sentence simplification described in 
-		<a href="https://rj3vans.github.io/Evans2020_SentenceSimplificationForTextProcessing.pdf" target="_blank">Evans 
-		(2020)</a>. It uses BERT models finetuned using the data presented in my thesis and additional annotated datasets to identify 
-		complex NPs and compound constituents (clauses, verb phrases, and noun phrases). 
-		This information is used to split complex sentences into sequences of simpler sentences.
-	</li>
+<li>
+  <H2><a href="https://huggingface.co/spaces/RJ3vans/SentenceSimplifier" target="_blank">Syntactic Sentence Simplifier</a></H2>
+  This demo implements the iterative approach to sentence simplification described in
+  <a href="https://rj3vans.github.io/Evans2020_SentenceSimplificationForTextProcessing.pdf" target="_blank">Evans (2020)</a>.
+  It uses BERT models finetuned using the data presented in my thesis and additional annotated datasets to identify
+  complex NPs and compound constituents (clauses, verb phrases, and noun phrases).
+  This information is used to split complex sentences into sequences of simpler sentences.
+
+  <div id="sss-demo">
+    <label for="sss-input">Enter a sentence or short passage</label>
+    <textarea id="sss-input" rows="6" placeholder="Paste text here, or click an example below.">John, who lives in London, went home.</textarea>
+
+    <p class="sss-examples">
+      Examples:
+      <button type="button" class="sss-example" data-text="John left early and Mary stayed late.">Compound clauses</button>
+      <button type="button" class="sss-example" data-text="John, who lives in London, went home.">Relative clause</button>
+      <button type="button" class="sss-example" data-text="The man and his dog, who live in Bristol, the English city, went home and Mary ran a marathon.">Longer example</button>
+    </p>
+
+    <p>
+      <button type="button" id="sss-run" class="sss-button">Simplify</button>
+      <button type="button" id="sss-clear" class="sss-button sss-secondary">Clear</button>
+    </p>
+
+    <p id="sss-status">Results are returned from the Hugging Face Space. The first request can take a little while if the demo is waking up.</p>
+    <div id="sss-result" aria-live="polite"></div>
+  </div>
+
+  <style>
+    #sss-demo {
+      margin: 0.8em 0 1.2em 0;
+      padding: 0.9em 1em;
+      max-width: 46em;
+      background: #f8f8f8;
+      border: 1px solid #bfc1c3;
+    }
+    #sss-demo label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.4em;
+    }
+    #sss-input {
+      width: 100%;
+      box-sizing: border-box;
+      font: inherit;
+      padding: 0.5em;
+      border: 1px solid #6f777b;
+    }
+    #sss-demo .sss-examples {
+      margin: 0.6em 0;
+    }
+    #sss-demo .sss-example,
+    #sss-demo .sss-button {
+      margin: 0 0.4em 0.4em 0;
+      padding: 0.35em 0.7em;
+      font: inherit;
+      cursor: pointer;
+    }
+    #sss-demo .sss-button {
+      background: #005ea5;
+      color: #fff;
+      border: 1px solid #005ea5;
+    }
+    #sss-demo .sss-secondary {
+      background: #fff;
+      color: #0b0c0c;
+      border: 1px solid #6f777b;
+    }
+    #sss-status {
+      margin: 0.4em 0 0.6em 0;
+      color: #0b0c0c;
+    }
+    #sss-result {
+      min-height: 3em;
+      padding: 0.7em 0.8em;
+      background: #fff;
+      border: 1px solid #bfc1c3;
+    }
+    #sss-result:empty {
+      display: none;
+    }
+  </style>
+
+  <script type="module">
+    import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+
+    const input = document.getElementById("sss-input");
+    const runBtn = document.getElementById("sss-run");
+    const clearBtn = document.getElementById("sss-clear");
+    const status = document.getElementById("sss-status");
+    const result = document.getElementById("sss-result");
+
+    let app = null;
+
+    async function getClient() {
+      if (!app) {
+        status.textContent = "Connecting to the Hugging Face Space...";
+        app = await Client.connect("RJ3vans/SentenceSimplifier");
+      }
+      return app;
+    }
+
+    document.querySelectorAll("#sss-demo .sss-example").forEach((button) => {
+      button.addEventListener("click", () => {
+        input.value = button.getAttribute("data-text");
+        input.focus();
+      });
+    });
+
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      result.innerHTML = "";
+      status.textContent = "Input cleared.";
+    });
+
+    runBtn.addEventListener("click", async () => {
+      const text = input.value.trim();
+      if (!text) {
+        status.textContent = "Please enter some text first.";
+        return;
+      }
+
+      runBtn.disabled = true;
+      status.textContent = "Simplifying... the first request can take a while if the Space is waking up.";
+      result.innerHTML = "";
+
+      try {
+        const client = await getClient();
+        const response = await client.predict("/process_text", {
+          input_text: text
+        });
+        const html = Array.isArray(response.data) ? response.data[0] : response.data;
+        result.innerHTML = html || "No output was returned.";
+        status.textContent = "Done.";
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Could not reach the Space. Open the demo link above to check that it is running, then try again.";
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  </script>
+</li>
       </ul>
     </div>
 	
