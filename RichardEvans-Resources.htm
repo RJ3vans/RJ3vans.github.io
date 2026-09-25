@@ -150,6 +150,12 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
       <button type="button" class="sss-example" data-text="The man and his dog, who live in Bristol, the English city, went home and Mary ran a marathon.">Longer example</button>
     </p>
 
+<p id="sss-auth">
+  <button type="button" id="sss-login" class="sss-button">Sign in with Hugging Face</button>
+  <button type="button" id="sss-logout" class="sss-button sss-secondary" hidden>Sign out</button>
+  <span id="sss-user"></span>
+</p>
+	  
     <p>
       <button type="button" id="sss-run" class="sss-button">Simplify</button>
       <button type="button" id="sss-clear" class="sss-button sss-secondary">Clear</button>
@@ -214,23 +220,60 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
     }
   </style>
 
-  <script type="module">
+<script type="module">
   import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+  import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "https://cdn.jsdelivr.net/npm/@huggingface/hub/+esm";
 
   const SPACE_URL = "https://rj3vans-sentencesimplifier.hf.space";
+  const HF_CLIENT_ID = "cc878939-07cc-41ed-9329-aea51ce123fb";
+  const TOKEN_KEY = "sss-hf-oauth";
+
   const input = document.getElementById("sss-input");
   const runBtn = document.getElementById("sss-run");
   const clearBtn = document.getElementById("sss-clear");
   const status = document.getElementById("sss-status");
   const result = document.getElementById("sss-result");
+  const loginBtn = document.getElementById("sss-login");
+  const logoutBtn = document.getElementById("sss-logout");
+  const userLabel = document.getElementById("sss-user");
 
   let running = false;
+
+  function loadSession() {
+    try { return JSON.parse(sessionStorage.getItem(TOKEN_KEY) || "null"); }
+    catch { return null; }
+  }
+
+  function saveSession(session) {
+    sessionStorage.setItem(TOKEN_KEY, JSON.stringify(session));
+  }
+
+  function clearSession() {
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
+
+  function isSessionValid(session) {
+    return session && session.accessToken && Date.parse(session.accessTokenExpiresAt) > Date.now();
+  }
+
+  function showSignedIn(session) {
+    const name = session.userInfo?.name || session.userInfo?.preferred_username || "Hugging Face user";
+    userLabel.textContent = "Signed in as " + name + ". Runs use your ZeroGPU allowance.";
+    loginBtn.hidden = true;
+    logoutBtn.hidden = false;
+    runBtn.disabled = false;
+  }
+
+  function showSignedOut() {
+    userLabel.textContent = "Sign in with Hugging Face to run the demo on your own GPU allowance.";
+    loginBtn.hidden = false;
+    logoutBtn.hidden = true;
+    runBtn.disabled = true;
+  }
 
   function extractHtml(payload) {
     if (payload == null) return "";
     if (typeof payload === "string") return payload;
-    if (typeof payload === "number" || typeof payload === "boolean") return String(payload);
-
     if (Array.isArray(payload)) {
       for (const item of payload) {
         const found = extractHtml(item);
@@ -238,7 +281,6 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
       }
       return "";
     }
-
     if (typeof payload === "object") {
       if (typeof payload.value === "string") return payload.value;
       if (typeof payload.html === "string") return payload.html;
@@ -247,6 +289,39 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
     }
     return "";
   }
+
+  const oauthResult = await oauthHandleRedirectIfPresent();
+  if (oauthResult?.accessToken) {
+    saveSession({
+      accessToken: oauthResult.accessToken,
+      accessTokenExpiresAt: oauthResult.accessTokenExpiresAt,
+      userInfo: oauthResult.userInfo
+    });
+    history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  let session = loadSession();
+  if (isSessionValid(session)) showSignedIn(session);
+  else {
+    clearSession();
+    session = null;
+    showSignedOut();
+  }
+
+  loginBtn.addEventListener("click", async () => {
+    window.location.href = await oauthLoginUrl({
+      clientId: HF_CLIENT_ID,
+      redirectUrl: window.location.href.split("#")[0].split("?")[0],
+      scopes: "openid profile"
+    });
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    clearSession();
+    session = null;
+    showSignedOut();
+    status.textContent = "Signed out.";
+  });
 
   document.querySelectorAll("#sss-demo .sss-example").forEach((button) => {
     button.addEventListener("click", () => {
@@ -262,10 +337,13 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
   });
 
   runBtn.addEventListener("click", async () => {
-    if (running) {
-      status.textContent = "A request is already running. Please wait.";
+    session = loadSession();
+    if (!isSessionValid(session)) {
+      showSignedOut();
+      status.textContent = "Please sign in with Hugging Face first.";
       return;
     }
+    if (running) return;
 
     const text = input.value.trim();
     if (!text) {
@@ -276,33 +354,29 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
     running = true;
     runBtn.disabled = true;
     result.innerHTML = "";
-    status.textContent = "Simplifying... this can take a minute on ZeroGPU.";
+    status.textContent = "Simplifying with your Hugging Face allowance...";
 
     try {
-      const client = await Client.connect(SPACE_URL);
+      const client = await Client.connect(SPACE_URL, {
+        token: session.accessToken
+      });
       const response = await client.predict("/process_text", [text]);
       const html = extractHtml(response);
-
-      if (html) {
-        result.innerHTML = html;
-        status.textContent = "Done.";
-      } else {
-        status.textContent = "The Space replied, but the HTML field was empty. Raw response is shown below.";
-        result.textContent = JSON.stringify(response, null, 2);
-      }
+      if (!html) throw new Error("The Space returned no HTML.");
+      result.innerHTML = html;
+      status.textContent = "Done. This run used your Hugging Face ZeroGPU quota.";
     } catch (error) {
-  const detail = (error && error.message) || String(error);
-  if (/ZeroGPU quota/i.test(detail)) {
-    status.innerHTML =
-      'The public demo has used its free GPU time for now. ' +
-      'You can try the full Space while logged into Hugging Face: ' +
-      '<a href="https://huggingface.co/spaces/RJ3vans/SentenceSimplifier" target="_blank">' +
-      'SentenceSimplifier</a>, or come back tomorrow.';
-  } else {
-    status.textContent = "Request failed: " + detail;
-  }
-  console.error(error);
-}
+      const detail = (error && error.message) || String(error);
+      if (/ZeroGPU quota/i.test(detail)) {
+        status.textContent = "Your Hugging Face ZeroGPU allowance is used up for now. Free accounts get 5 minutes per day; PRO accounts get 40.";
+      } else {
+        status.textContent = "Request failed: " + detail;
+      }
+      console.error(error);
+    } finally {
+      running = false;
+      runBtn.disabled = false;
+    }
   });
 </script>
 </li>
