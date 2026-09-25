@@ -141,28 +141,29 @@ GOVUK.Analytics.Format = "browse";</script><script type="text/javascript">
 
   <div id="sss-demo">
     <label for="sss-input">Enter a sentence or short passage</label>
-    <textarea id="sss-input" rows="6" placeholder="Paste text here, or click an example below.">John, who lives in London, went home.</textarea>
+<textarea id="sss-input" rows="6" placeholder="Paste text here, or click an example below."></textarea>
 
-    <p class="sss-examples">
-      Examples:
-      <button type="button" class="sss-example" data-text="John left early and Mary stayed late.">Compound clauses</button>
-      <button type="button" class="sss-example" data-text="John, who lives in London, went home.">Relative clause</button>
-      <button type="button" class="sss-example" data-text="The man and his dog, who live in Bristol, the English city, went home and Mary ran a marathon.">Longer example</button>
-    </p>
+<p class="sss-examples">
+  Examples:
+  <button type="button" class="sss-example" data-text="John left early and Mary stayed late.">Compound clauses</button>
+  <button type="button" class="sss-example" data-text="John, who lives in London, went home.">Relative clause</button>
+  <button type="button" class="sss-example" data-text="The man and his dog, who live in Bristol, the English city, went home and Mary ran a marathon.">Longer example</button>
+</p>
+
+<p>
+  <button type="button" id="sss-run" class="sss-button">Simplify</button>
+  <button type="button" id="sss-clear" class="sss-button sss-secondary">Clear</button>
+</p>
 
 <p id="sss-auth">
   <button type="button" id="sss-login" class="sss-button">Sign in with Hugging Face</button>
   <button type="button" id="sss-logout" class="sss-button sss-secondary" hidden>Sign out</button>
 </p>
 <p id="sss-user"></p>
-	  	  
-    <p>
-      <button type="button" id="sss-run" class="sss-button">Simplify</button>
-      <button type="button" id="sss-clear" class="sss-button sss-secondary">Clear</button>
-    </p>
+<p id="sss-status"></p>
 
-    <p id="sss-status">Results are returned from the Hugging Face Space. The first request can take a little while if the demo is waking up.</p>
-    <div id="sss-result" aria-live="polite"></div>
+<div id="sss-result" aria-live="polite"></div>
+
   </div>
 
   <style>
